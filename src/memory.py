@@ -1,7 +1,7 @@
 import time,sys
 class Memory(object):
 	"""docstring for Cache"""
-	def __init__(self,initialData, blocks,blockSize):
+	def __init__(self,initialData,blocks,blockSize):
 		self.data = initialData #the block size of the memory
 		self.iCache=Cache('instruction',blocks,blockSize)
 		self.dCache = Cache('data',4,4)#this is the cache location that help find the hit
@@ -9,17 +9,19 @@ class Memory(object):
 	#fetch this data from the memory and return the number of cycle to perform this
 	#if this time is more than one the other value will need to stall
 	def fetch(self,fetchType,startAddress,size):#the size will be in block
+		block = =1
 		if fetchType=='instruction':		
 			if  (block=self.iCache.isHit(address))!= -1:
-				return size
+				return address,size #the address is th eindex 
 			else:
-				return None, size +(self.iCache.blockSize*3)#penalty for cache miss
+				return address, size +(self.iCache.blockSize*3)#penalty for cache miss
 
 		elif fetchType=='data':
 			if (block=self.dCache.isHit(address))!=-1:
+				self.dCache.updateCache(block)
 				return dCache.fetch(block,address,size) ,size
 			least = iCache.getLeastRecentlyUsed()
-			memoryData = data[startAddress:startAddress+size]
+			memoryData = self.data[startAddress:startAddress+size]
 			iCache.writeToCache(least,startAddress,memoryData)
 		return data[startAddress:startAddress+size] size + (self.dCache.blockSize*3)#penalty for cache miss
 	
@@ -61,14 +63,23 @@ class Cache(object):
 			return True
 		return False
 
-	def findBlock(self,address,size):
+	def findBlock(self,fetchType,address,size):
 		for index,block in enumerate(self.blocks):
 			if block['startAddress']==None:
 				continue
-			if block['startAddress'] <=address and address <= block['startAddress'] + size:
-				return index
+			if self.fetchType =='instruction':
+				blockindex = address//self.blockSize
+				if blockindex > self.blocks:
+					raise Exception('invalid memory location')
+				if block['startAddress']==blockindex:
+					return index
+			else:
+				if block['startAddress'] <=address and address <= block['startAddress'] + size:
+					return index
 		return -1
 
+	def updateCache(self,bl):
+		block = self.blocks[0]['time']= time.time()
 
 	def fetch(self,block,address,size):
 		data = self.blocks[block]['data']

@@ -31,11 +31,14 @@ class CPU(object):
 		while not self.hasHalt:
 			currentInstruction,fetchCycle = self.fetchInstruction(fetchCycle)#retun the instruction and the time taken
 			issueCycle = self.issueInstruction(currentInstruction,issueCycle)
-			readCycle = self.
+			readCycle = self.read(currentInstruction.readCycle)
+			execCycle = self.execute(currentInstruction,executeCycle)
+			writeCycle =self.executeWrite(currentInstruction,writeCycle)
+			
 
 
 	def fetchInstruction(self):
-		
+		self.memory.fetch('instruction',self.pc,1)
 	# this is the function that will save the necessary information into the output file	
 	def profile(self,instruction):
 		data = self.getOutputInformation()
