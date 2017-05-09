@@ -15,7 +15,7 @@ memoryData =myParser.loadInitialMemoryData()
 memory =structure.Memory(memoryData,icacheBlocks,icacheBlockSize);
 instructions = myParser.loadInstructions();
 instructionSet = myParser.getInstructionSet();
-processor = cpu.CPU(memory,instructions,instructionSet)
+processor = cpu.CPU(memory,instructions,instructionSet,myParser.adderSize,multiplierSize,dividerSize)
 		
 class Instruction(object):
 	"""docstring for Instruction"""

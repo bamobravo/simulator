@@ -1,4 +1,4 @@
-import time
+import time,sys
 class Memory(object):
 	"""docstring for Cache"""
 	def __init__(self,initialData, blocks,blockSize):
@@ -8,28 +8,68 @@ class Memory(object):
 
 	#fetch this data from the memory and return the number of cycle to perform this
 	#if this time is more than one the other value will need to stall
-	def fetch(self,fetchType,startAddress,size,wait=0):#the size will be in block
-		if  self.iCache.isHit(address):
-			return size;
-		return wait+(size*3)#penalty for cache miss
+	def fetch(self,fetchType,startAddress,size):#the size will be in block
+		if fetchType=='instruction':		
+			if  (block=self.iCache.isHit(address))!= -1:
+				return size
+			else:
+				return None, size +(self.iCache.blockSize*3)#penalty for cache miss
+
+		elif fetchType=='data':
+			if (block=self.dCache.isHit(address))!=-1:
+				return dCache.fetch(block,address,size) ,size
+			least = iCache.getLeastRecentlyUsed()
+			memoryData = data[startAddress:startAddress+size]
+			iCache.writeToCache(least,startAddress,memoryData)
+		return data[startAddress:startAddress+size] size + (self.dCache.blockSize*3)#penalty for cache miss
 	
 
 
 class Cache(object):
 	"""docstring for instructionCache"""
 	def __init__(self,cacheType,blocks, blockSize):
-		self.blocks = blocks
+		self.blocks = []
+		for x in range(0,blocks):
+			self.blocks.append({'startAddress':None,'time':None,'data':None}) 
 		self.blockSize= blockSize
 		self.cacheType = cacheType
-		self.buffer ={}#use a dictinary of dictionary to represent the cache information 
-	def isHit(self,fetchType,address):
-		# use the information about the strategy to perform this operatio and to get work done here
-		if self.checkAddress(fetchType,address):
-			self.buffer[address]['time']= time.time()
-			return true;
-	def checkAddress(self,cacheType,address):
-		if fetchType=='instruction':
-			index = address%self.blocks
+		self.hitCount=0
+		self.requestCount = 0
 
-	def update(self,fetchType,address,data):
-		pass			
+	def writeToCache(self,index,address,data):
+		block =blocks[index]
+		block['startAddress']=address
+		block['time']=time.time()
+		block['data']=data
+
+	def getLeastRecentlyUsed(self):
+		min = sys.maxint
+		position = -1
+		for index,value in enumerate(self.blocks):
+			if value['time'] < min:
+				position =index
+				min = value['time']
+		return position
+
+	def isHit(self,fetchType,address,size):
+		# use the information about the strategy to perform this operatio and to get work done here
+		block = self.findBlock(address,size)
+		self.requestCount+=1
+		if block!=-1:
+			self.hitCount+=1
+			self.blocks[block]['time']= time.time()
+			return True
+		return False
+
+	def findBlock(self,address,size):
+		for index,block in enumerate(self.blocks):
+			if block['startAddress']==None:
+				continue
+			if block['startAddress'] <=address and address <= block['startAddress'] + size:
+				return index
+		return -1
+
+
+	def fetch(self,block,address,size):
+		data = self.blocks[block]['data']
+		return data[address:address+size]

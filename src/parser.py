@@ -1,5 +1,5 @@
 # contains functionalities for parsing the instruction and the configuration file
-import instruction
+import instruction,functionalunit
 class functionalParser(object):
 	"""docstring for functionalParser"""
 	def __init__(self,instructionFile,configFile,data):
@@ -7,7 +7,7 @@ class functionalParser(object):
 		self.configFile = configFile
 		self.dataFile = data
 		self.labels=[]
-
+		
 	def loadInstructions(self):
 		# this function parses instruction in the file and report in case or error
 		content = self.loadFile(self.instructionFile)
@@ -102,8 +102,8 @@ class functionalParser(object):
 
 	def buildInstructionSet(self):
 		#create a list of dictionaries containing the instruction set and the properties
-		dict = [{'name':'HLT','execute':0,'completionStage':'Issue','operand':0,'type':'Arithmetic'}]
-		dict.append({'name':'J','execute':0,'completionStage':'Issue','operand':3,'type':'Arithmetic'})
+		dict = [{'name':'HLT','execute':0,'completionStage':'Issue','operand':0,'type':'Special'}]
+		dict.append({'name':'J','execute':0,'completionStage':'Issue','operand':3,'type':'Control'})
 		dict.append({'name':'BEQ','execute':0,'completionStage':'Read','operand':3,'type':'Arithmetic'})
 		dict.append({'name':'BNE','execute':0,'completionStage':'Read','operand':3,'type':'Arithmetic'})
 		dict.append({'name':'DADD','execute':1,'completionStage':'Execute','operand':3,'type':'Arithmetic'})
