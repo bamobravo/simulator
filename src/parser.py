@@ -14,23 +14,28 @@ class functionalParser(object):
 		result=[]
 		instr = content.split('\n');
 		for index,ins in enumerate(instr):
+			label=None
 			col =ins.strip()
-			col = ins.split(' ')
+			col = ins.split(' ',1)
 			if len(col) ==1:
 				#make this instruction to be a one operand instruction
 				command = col[0].strip()
 				operands =[]
 			else:
-				com = col[0].strip().split(':')
+				com = col[0].strip().split(':') # process label
 				if len(com) > 1:
-					self.labels.append(com[0])
+					label =com[0]
+					self.labels.append({label:index})
 					command = com[1]
 				else:
 					command = com[0]
 				operands = col[1].strip().split(',')
 			if not self.isValidInstruction(command,operands):
 				raise Exception('syntax error on line '+str(index+1))
-			tempInstruction = instruction.Instruction(command,operands)
+			tempInstruction = instruction.Instruction(command,operands,label)
+			result.append(tempInstruction)
+		return result
+
 
 	def icacheInfo(self):
 		try:
@@ -52,8 +57,8 @@ class functionalParser(object):
 				self.adderSize = int(temp[0])
 			elif item.find("Multiplier")!= -1:
 				temp = item[startpos:].strip().split(',')
-				self.MultiplierCycle = int(temp[1])
-				self.MultiplierSize = int(temp[0])
+				self.multiplierCycle = int(temp[1])
+				self.multiplierSize = int(temp[0])
 			elif item.find("divider") != -1:
 				temp = item[startpos:].strip().split(',')
 				self.dividerCycle = int(temp[1])
@@ -66,7 +71,6 @@ class functionalParser(object):
 	def isValidInstruction(self,command,operands):
 		# need a  list of all the valid istruction and the number of operands
 		instruction = self.findInstruction(command)
-		print instruction
 		if instruction==None:
 			return False
 		return instruction['operand']==len(operands) 
@@ -128,7 +132,7 @@ class functionalParser(object):
 		return dict
 
 	def loadConfigFromFile(self):
-		return self.adderCycle,self.MultiplierCycle,self.dividerCycle
+		return self.adderCycle,self.multiplierCycle,self.dividerCycle
 	#function to load the memory information in a way that it can be easily accessed
 	def loadInitialMemoryData(self):
 		content = self.loadFile(self.dataFile)

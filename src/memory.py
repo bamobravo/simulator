@@ -8,22 +8,28 @@ class Memory(object):
 
 	#fetch this data from the memory and return the number of cycle to perform this
 	#if this time is more than one the other value will need to stall
-	def fetch(self,fetchType,startAddress,size):#the size will be in block
-		block = =1
-		if fetchType=='instruction':		
-			if  (block=self.iCache.isHit(address))!= -1:
-				return address,size #the address is th eindex 
+	def fetch(self,cacheType,startAddress,size):#the size will be in block
+		block =-1
+		if cacheType=='instruction':
+			block =self.iCache.isHit(startAddress,1)
+			if  block!= -1:
+				return startAddress,size #the address is th eindex 
 			else:
-				return address, size +(self.iCache.blockSize*3)#penalty for cache miss
+				#get the index of the value to write
+				index =startAddress//self.iCache.blockSize
+				self.iCache.writeToCache(index,index,True)
+				return startAddress, size +(self.iCache.blockSize*3)#penalty for cache miss
 
-		elif fetchType=='data':
-			if (block=self.dCache.isHit(address))!=-1:
+		elif cacheType=='data':
+			block  =self.dCache.isHit(startAddress,size)
+			if block!=-1:
 				self.dCache.updateCache(block)
-				return dCache.fetch(block,address,size) ,size
-			least = iCache.getLeastRecentlyUsed()
-			memoryData = self.data[startAddress:startAddress+size]
-			iCache.writeToCache(least,startAddress,memoryData)
-		return data[startAddress:startAddress+size] size + (self.dCache.blockSize*3)#penalty for cache miss
+				return self.dCache.fetch(block,address,size) ,size
+			least = self.dCache.getLeastRecentlyUsed()
+			memoryData = self.data[startAddress:startAddress+(size*32)]
+			print memoryData
+			self.dCache.writeToCache(least,startAddress,memoryData)
+		return memoryData, size + (self.dCache.blockSize*3)#penalty for cache miss
 	
 
 
@@ -39,7 +45,7 @@ class Cache(object):
 		self.requestCount = 0
 
 	def writeToCache(self,index,address,data):
-		block =blocks[index]
+		block =self.blocks[index]
 		block['startAddress']=address
 		block['time']=time.time()
 		block['data']=data
@@ -53,21 +59,21 @@ class Cache(object):
 				min = value['time']
 		return position
 
-	def isHit(self,fetchType,address,size):
+	def isHit(self,address,size):
 		# use the information about the strategy to perform this operatio and to get work done here
 		block = self.findBlock(address,size)
 		self.requestCount+=1
 		if block!=-1:
 			self.hitCount+=1
 			self.blocks[block]['time']= time.time()
-			return True
-		return False
+			return block
+		return -1
 
-	def findBlock(self,fetchType,address,size):
+	def findBlock(self,address,size):
 		for index,block in enumerate(self.blocks):
 			if block['startAddress']==None:
 				continue
-			if self.fetchType =='instruction':
+			if self.cacheType =='instruction':
 				blockindex = address//self.blockSize
 				if blockindex > self.blocks:
 					raise Exception('invalid memory location')
