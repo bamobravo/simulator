@@ -1,6 +1,6 @@
 # this class does the loading of all the functioall unit of the computer organisation
 # function to load the cpu
-import sys,parser,argparse,memory,cpu
+import sys,parser,argparse,memory,cpu,functionalunit
 
 
 
@@ -20,5 +20,8 @@ memoryData =myParser.loadInitialMemoryData()
 memory =memory.Memory(memoryData,icacheBlocks,icacheBlockSize);
 instructions = myParser.loadInstructions();
 instructionSet = myParser.getInstructionSet();
-processor = cpu.CPU(memory,instructions,instructionSet,myParser.adderSize,myParser.multiplierSize,myParser.dividerSize,out)
+adder = functionalunit.FunctionalUnit('adder',myParser.adderSize,myParser.adderCycle)
+multiplier = functionalunit.FunctionalUnit('multiplier',myParser.multiplierSize,myParser.multiplierCycle)
+divider = functionalunit.FunctionalUnit('divider',myParser.dividerSize,myParser.dividerCycle)
+processor = cpu.CPU(memory,instructions,instructionSet,adder,multiplier,divider,myParser.labels,out)
 processor.start()

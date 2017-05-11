@@ -1,7 +1,6 @@
-import functionalunit
 class CPU(object):
 	
-	def __init__(self,memory,instruction,InstructionSet,adderUnit,mulUnit,divUnit,outFile):
+	def __init__(self,memory,instruction,InstructionSet,adderUnit,mulUnit,divUnit,labels,outFile):
 		self.memory = memory
 		self.InstructionSet = InstructionSet
 		self.pc =0
@@ -13,10 +12,12 @@ class CPU(object):
 		self.instruction = instruction
 		self.hasHalt=False
 		self.profileInformation=[]
-		self.adder = functionalunit.FunctionalUnit('adder',adderUnit)
-		self.Multiplier = functionalunit.FunctionalUnit('multiplier',mulUnit)
-		self.division = functionalunit.FunctionalUnit('divider',divUnit) 
+		self.adder = adderUnit
+		self.multiplier = mulUnit
+		self.divider = divUnit
+		self.labels= labels
 		# create and initialise all the register and the corresponding register value
+		# use a stack for the completion time issue
 		for i in range(1,33):
 			self.rRegister['R'+str(i)]=0
 			self.fRegister['F'+str(i)]=0
@@ -27,27 +28,28 @@ class CPU(object):
 		previousValues=self.createEmptyValues()
 		previousInstruction = None
 		while not self.hasHalt:
-			try:
-				stall =0 # the value for monitoring stalling
-				currentValues=self.createEmptyValues()
-				currentInstruction,fetchCycle = self.fetchInstruction(previousInstruction,previousValues,currentValues)#retun the instruction and the time taken
-				currentValues['fetch']=fetchCycle
-				#create a context for each of the execution and pass the context to all the pipeline stage function
-				struct,issueCycle,hasHalt = self.issueInstruction(currentInstruction,previousInstruction,previousValues,currentValues) # the step depend on each other
-				currentValues['issue']=issueCycle
-				readCycle = self.read(currentInstruction,previousInstruction,previousValues,currentValues)
-				currentValues['read']=readCycle
-				execCycle,raw,waw,struct = self.execute(currentInstruction,previousInstruction,previousValues,currentValues,struct)
-				currentValues['execute']=execCycle
-				writeCycle =self.write(currentInstruction,previousInstruction,previousValues,currentValues)
-				currentValues['write']=writeCycle
-				previousValues= currentValues
-				previousInstruction=currentInstruction
-				temp = self.combineProfileData(currentInstruction,fetchCycle,issueCycle,readCycle,execCycle,writeCycle,waw,raw,struct)
+			stall =0 # the value for monitoring stalling
+			currentValues=self.createEmptyValues()
+			currentInstruction,fetchCycle = self.fetchInstruction(previousInstruction,previousValues,currentValues)#retun the instruction and the time taken
+			currentValues['fetch']=fetchCycle
+			if currentInstruction.command=='HLT':
+				temp = self.combineProfileData(currentInstruction,fetchCycle,'','','','','','','')
 				self.profileInformation.append(temp)
-			except Exception as e:
-				print "some unforseen error occured "
 				break
+			#create a context for each of the execution and pass the context to all the pipeline stage function
+			struct,issueCycle,hasHalt = self.issueInstruction(currentInstruction,previousInstruction,previousValues,currentValues) # the step depend on each other
+			currentValues['issue']=issueCycle
+			readCycle = self.read(currentInstruction,previousInstruction,previousValues,currentValues)
+			currentValues['read']=readCycle
+			execCycle,raw,waw,struct = self.execute(currentInstruction,previousInstruction,previousValues,currentValues,struct)
+			currentValues['execute']=execCycle
+			writeCycle =self.write(currentInstruction,previousInstruction,previousValues,currentValues)
+			currentValues['write']=writeCycle
+			previousValues= currentValues
+			previousInstruction=currentInstruction
+			temp = self.combineProfileData(currentInstruction,fetchCycle,issueCycle,readCycle,execCycle,writeCycle,waw,raw,struct)
+			self.profileInformation.append(temp)
+
 		self.profile()
 
 	def createEmptyValues(self):
@@ -66,12 +68,13 @@ class CPU(object):
 		result['memory']=self.memory
 		result['fRegister']= self.fRegister
 		result['rRegister']= self.rRegister
-		result['previousInstruction']=None
+		result['functional']= {'adder':self.adder,'multiplier':self.multiplier,'divider':self.divider}
 		return result
 
 	def fetchInstruction(self,previousInstruction,previous,current):
 		'the function simulation the fetch instruction pipiline stage, the function returns the instruction'
-		halt = False
+		# halt = False
+
 		index,cycleCount=self.memory.fetch('instruction',self.pc,1)
 		self.ip = self.pc
 		self.pc+=1
@@ -84,8 +87,9 @@ class CPU(object):
 	def issueInstruction(self,instruction,previousInstruction,previous, current):
 		halt = False
 		if instruction.command=='HLT':
+			return '','',''
 			halt = True
-		if previousInstruction!=None and (instruction.command=='LI' and previousInstruction.command=='LI') or (instruction.command=='L.D' and previousInstruction.command=='L.D'):
+		if previousInstruction!=None and instruction.command==previousInstruction.command:
 			if previous['write'] + 1 < current['fetch']:
 				return 'N',current['fetch']+1,halt
 			return 'Y',previous['write'] + 1,halt
@@ -93,29 +97,98 @@ class CPU(object):
 			return 'N',current['fetch']+1,halt
 
 	def read(self,instruction,previousInstruction,previous,current):
+		if instruction.command=='HLT':
+			return ''
 		if instruction.command=='LI':
 			return current['issue'] + 1;
 		return current['issue'] + 1
 		
 	def execute(self,instruction,previousInstruction,previous,current,struct ='N'):
+		if instruction.command=='HLT':
+			return '','','',''
+		instructionInfo = self.getInstructionInformation(instruction.command)
+		if instructionInfo==None:
+			raise Exception("unsupported operation")
 		if instruction.command=='LI':
 			self.rRegister[instruction.operands[0]]=int(instruction.operands[1])
 			return current['read'] +1,'N','N',struct
 		if instruction.command=='L.D':
 			temp = instruction.operands[1].split('(')
 			num = temp[0]
-			print temp[1]
 			reg = int(self.rRegister[temp[1][0:len(temp[1])-1]])
 			address = int(num) + reg
-			print address
 			data,cycle =self.memory.fetch('data',address,2)#load double word from memory
 			self.fRegister[instruction.operands[0]]=self.bin2dec(data)
 			return current['read'] +cycle,'N','N',struct
+		# treat each instruction category differently
+		#you have to include information about the structural unit in the calculation
+		if instructionInfo['type'] =='Arithmetic' or instructionInfo['type'] =='Logical':
+			#check for likely data hazard
+			extra = 0;
+			# also check for structural hazard
+			fUnit = self.getFunctionalUnit(instruction)
+			hazard,raw,war = self.isDataHazard(previousInstruction,instruction)
+			structOccured,minValue  = fUnit.isHazard(previous['read'])
+			struct = 'Y' if structOccured else 'N'
+			dataExectTime = 0
+			if hazard:
+				pass
+				# dataExectTime = 
+				# need to stall when data hazard occurs increase the value of extra based on some condition
+				# remember there are different functional unit 
+			context = self.createContext()
+			cycle= instruction.execute(context)
+			usedTime = previous['read']+dataExectTime+cycle
+			return usedTime,raw,war,struct
+		elif instructionInfo['type']=='Control':
+			usedTime = previous['read'] + 1
+			if instruction.command=='J':
+				self.pc = self.labels[instruction.operands[0]]
+			elif instruction.command=='BNE':
+				if self.rRegister[instruction.operands[0]]!=self.rRegister[instruction.operands[1]]:
+					self.pc = self.labels[instruction.operands[2]] 
+			elif instruction.command=='BEQ':
+				if self.rRegister[instruction.operands[0]]==self.rRegister[instruction.operands[1]]:
+					self.pc = self.labels[instruction.operands[2]] 
+			return usedTime,'N','N','N'
 
+	def getFunctionalUnit(self,instruction):
+		instructionType = instruction.command
+		if instructionType.find('ADD')!=-1 or instructionType.find('SUB')!= -1:
+			return self.adder
+		elif instructionType.find('MUL')!= -1:
+			return self.multiplier
+		elif instructionType.find('DIV')!= -1:
+			return self.divider
+		else:
+			return None
+
+	def isDataHazard(self,previous,current):
+		#check if the previous instruction contains operand in the next instruction
+		# also determine if it is WAR OR RAW
+		raw='N'
+		war ='N'
+		result = False
+		for i,cur in enumerate(current.operands):
+			try:
+				index = previous.operands.index(cur)
+				if index!=-1:
+					result = True
+					if i==0 and index!=0:
+						raw='Y'# the current instruction tries to use loaction of the first instruction
+					if index==0 and i!=0:
+						war='Y'
+			except Exception as e:
+				continue
+			
+		return result,raw,war
 
 	def write(self,instruction,previousInstruction,previous,current):
-		if instruction.command=='LI':
-			return current['execute'] +1
+		# if instruction.command=='LI':
+		# 	return current['execute'] +1
+		if instruction.command=='HLT':
+			return ''
+		return current['execute']+1
 
 	def combineProfileData(self,instruction,fetch,issue,read,execute,write,waw,raw,struct):
 		'create account profiling information for display as a form of dictionary'
@@ -139,6 +212,11 @@ class CPU(object):
 			temp = ','.join(instruction.operands)
 			result+=' '+temp
 		return result
+	def getInstructionInformation(self,command):
+		for instruction in self.InstructionSet:
+			if instruction['name'] ==command:
+				return instruction
+		return None
 
 	def bin2dec(self,value):
 		return int(value,2)
@@ -160,7 +238,7 @@ class CPU(object):
 
 	def getOutputInformation(self):
 		"format the profiling information from the cpu execution"
-		content ='Instruction	Fetch 	Issue 	Read 	Exec 	Write 	RAW 	WAW 	Struct'
+		content ="Instruction	Fetch 	Issue 	Read 	Exec 	Write 	RAW 	WAW 	Struct\n"
 		for item in self.profileInformation:
 			content+="{!s} 	{!s} 	{!s} 	{!s} 	{!s} 	{!s} 	{!s} 	{!s} 	{!s}\n".format(item['instruction'],item['fetch'],item['issue'],item['read'],item['execute'],item['write'], item['raw'],item['waw'],item['struct'])
 		# add additional information about the memory information

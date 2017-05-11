@@ -6,7 +6,7 @@ class functionalParser(object):
 		self.instructionFile = instructionFile
 		self.configFile = configFile
 		self.dataFile = data
-		self.labels=[]
+		self.labels={}
 		
 	def loadInstructions(self):
 		# this function parses instruction in the file and report in case or error
@@ -25,7 +25,7 @@ class functionalParser(object):
 				com = col[0].strip().split(':') # process label
 				if len(com) > 1:
 					label =com[0]
-					self.labels.append({label:index})
+					self.labels[label]=index
 					command = com[1]
 				else:
 					command = com[0]
@@ -108,8 +108,8 @@ class functionalParser(object):
 		#create a list of dictionaries containing the instruction set and the properties
 		dict = [{'name':'HLT','execute':0,'completionStage':'Issue','operand':0,'type':'Special'}]
 		dict.append({'name':'J','execute':0,'completionStage':'Issue','operand':3,'type':'Control'})
-		dict.append({'name':'BEQ','execute':0,'completionStage':'Read','operand':3,'type':'Arithmetic'})
-		dict.append({'name':'BNE','execute':0,'completionStage':'Read','operand':3,'type':'Arithmetic'})
+		dict.append({'name':'BEQ','execute':0,'completionStage':'Read','operand':3,'type':'Control'})
+		dict.append({'name':'BNE','execute':0,'completionStage':'Read','operand':3,'type':'Control'})
 		dict.append({'name':'DADD','execute':1,'completionStage':'Execute','operand':3,'type':'Arithmetic'})
 		dict.append({'name':'DADDI','execute':1,'completionStage':'Execute','operand':3,'type':'Arithmetic'})
 		dict.append({'name':'DSUB','execute':1,'completionStage':'Execute','operand':3,'type':'Arithmetic'})
@@ -118,7 +118,7 @@ class functionalParser(object):
 		dict.append({'name':'ANDI','execute':1,'completionStage':'Execute','operand':3,'type':'Arithmetic'})
 		dict.append({'name':'OR','execute':1,'completionStage':'Execute','operand':3,'type':'Logical'})
 		dict.append({'name':'ORI','execute':1,'completionStage':'Execute','operand':3,'type':'Arithmetic'})
-		dict.append({'name':'LI','execute':1,'completionStage':'Execute','operand':2,'type':'Data'})
+		dict.append({'name':'LI','execute':1,'completionStage':'Execute','operand':2,'type':'Instruction'})
 		dict.append({'name':'LUI','execute':1,'completionStage':'Execute','operand':2,'type':'Data'})
 		dict.append({'name':'LW','execute':1,'completionStage':'Execute','operand':2,'type':'Data'})
 		dict.append({'name':'SW','execute':1,'completionStage':'Execute','operand':2,'type':'Data'})

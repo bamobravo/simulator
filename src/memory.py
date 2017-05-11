@@ -16,7 +16,8 @@ class Memory(object):
 				return startAddress,size #the address is th eindex 
 			else:
 				#get the index of the value to write
-				index =startAddress//self.iCache.blockSize
+				index =startAddress%self.iCache.blockSize
+				tag = startAddress/self.iCache.blockSize
 				self.iCache.writeToCache(index,index,True)
 				return startAddress, size +(self.iCache.blockSize*3)#penalty for cache miss
 
@@ -27,7 +28,6 @@ class Memory(object):
 				return self.dCache.fetch(block,address,size) ,size
 			least = self.dCache.getLeastRecentlyUsed()
 			memoryData = self.data[startAddress:startAddress+(size*32)]
-			print memoryData
 			self.dCache.writeToCache(least,startAddress,memoryData)
 		return memoryData, size + (self.dCache.blockSize*3)#penalty for cache miss
 	
@@ -75,6 +75,7 @@ class Cache(object):
 				continue
 			if self.cacheType =='instruction':
 				blockindex = address//self.blockSize
+				tag = address%self.blockSize
 				if blockindex > self.blocks:
 					raise Exception('invalid memory location')
 				if block['startAddress']==blockindex:
