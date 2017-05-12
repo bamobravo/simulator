@@ -130,6 +130,8 @@ class CPU(object):
 			hazard,raw,war = self.isDataHazard(previousInstruction,instruction)
 			structOccured,minValue  = fUnit.isHazard(previous['read'])
 			struct = 'Y' if structOccured else 'N'
+			if structOccured:
+				pass
 			dataExectTime = 0
 			if hazard:
 				pass
@@ -138,7 +140,8 @@ class CPU(object):
 				# remember there are different functional unit 
 			context = self.createContext()
 			cycle= instruction.execute(context)
-			usedTime = previous['read']+dataExectTime+cycle
+			print cycle
+			usedTime = current['read']+dataExectTime+cycle
 			return usedTime,raw,war,struct
 		elif instructionInfo['type']=='Control':
 			usedTime = previous['read'] + 1

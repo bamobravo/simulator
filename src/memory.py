@@ -1,4 +1,4 @@
-import time,sys
+import time,sys,math
 class Memory(object):
 	"""docstring for Cache"""
 	def __init__(self,initialData,blocks,blockSize):
@@ -18,7 +18,7 @@ class Memory(object):
 				#get the index of the value to write
 				index =startAddress%self.iCache.blockSize
 				tag = startAddress/self.iCache.blockSize
-				self.iCache.writeToCache(index,index,True)
+				self.iCache.writeToCache(index,startAddress,tag,True)
 				return startAddress, size +(self.iCache.blockSize*3)#penalty for cache miss
 
 		elif cacheType=='data':
@@ -28,7 +28,7 @@ class Memory(object):
 				return self.dCache.fetch(block,address,size) ,size
 			least = self.dCache.getLeastRecentlyUsed()
 			memoryData = self.data[startAddress:startAddress+(size*32)]
-			self.dCache.writeToCache(least,startAddress,memoryData)
+			self.dCache.writeToCache(least,startAddress,startAddress/self.dCache.blockSize,memoryData)
 		return memoryData, size + (self.dCache.blockSize*3)#penalty for cache miss
 	
 
@@ -44,9 +44,10 @@ class Cache(object):
 		self.hitCount=0
 		self.requestCount = 0
 
-	def writeToCache(self,index,address,data):
+	def writeToCache(self,index,address,tag,data):
 		block =self.blocks[index]
 		block['startAddress']=address
+		block['tag']=tag
 		block['time']=time.time()
 		block['data']=data
 
@@ -74,11 +75,11 @@ class Cache(object):
 			if block['startAddress']==None:
 				continue
 			if self.cacheType =='instruction':
-				blockindex = address//self.blockSize
-				tag = address%self.blockSize
+				blockindex = address%self.blockSize
+				tag = address/self.blockSize
 				if blockindex > self.blocks:
 					raise Exception('invalid memory location')
-				if block['startAddress']==blockindex:
+				if abs(block['startAddress']-address)<self.blockSize :
 					return index
 			else:
 				if block['startAddress'] <=address and address <= block['startAddress'] + size:

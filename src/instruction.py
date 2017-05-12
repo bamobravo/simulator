@@ -22,7 +22,7 @@ class Instruction(object):
 			return context['functional']['adder'].cycle
 		if self.command =='DIV.D':
 			register[firstOperand]=register[secondOperand] / register[thirdOperand]
-			return context['functional']['adder'].cycle
+			return context['functional']['divider'].cycle
 
 		if self.command=='MUL.D':
 			register[firstOperand]=register[secondOperand] * register[thirdOperand]
@@ -42,15 +42,15 @@ class Instruction(object):
 
 		if self.command =='DSUBI':
 			register[firstOperand]=register[secondOperand] + thirdOperand
-			return context['function']['adder'].cycle/2
+			return context['functional']['adder'].cycle/2
 
 		if self.command =='AND':
 			register[firstOperand]=register[secondOperand] and register[thirdOperand]
-			return context['function']['adder'].cycle
+			return 1
 
 		if self.command =='OR':
 			register[firstOperand]=register[secondOperand] or register[thirdOperand]
-			return context['function']['adder'].cycle
+			return 1
 
 		
 		
